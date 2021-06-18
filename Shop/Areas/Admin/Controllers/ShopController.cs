@@ -1,4 +1,5 @@
 ﻿using PagedList;
+using Shop.Areas.Admin.Models.ViewModels.Shop;
 using Shop.Models.Data;
 using Shop.Models.ViewModels.Shop;
 using System;
@@ -11,6 +12,7 @@ using System.Web.Mvc;
 
 namespace Shop.Areas.Admin.Controllers
 {
+    [Authorize(Roles = "Admin")]
     public class ShopController : Controller
     {
         // GET: Admin/Shop/Categories
@@ -543,6 +545,66 @@ namespace Shop.Areas.Admin.Controllers
 
             if (System.IO.File.Exists(fullPath2))
                 System.IO.File.Delete(fullPath2);
+        }
+        
+        [HttpGet]
+        public ActionResult Orders()
+        {
+            //Инициализируем модель OrdersForAdminVM
+            List<OrdersForAdminVM> ordersForAdmin = new List<OrdersForAdminVM>();
+
+            using (Db db = new Db())
+            {
+                //Инициализируем модель OrderVM
+                List<OrderVM> orders = db.Orders.ToArray().Select(x => new OrderVM(x)).ToList();
+                //Перебираем данные модели OrderVM
+                foreach (var order in orders)
+                {
+                    //Инициализируем словарь товаров
+                    Dictionary<string, int> productAndQuantity = new Dictionary<string, int>();
+
+                    //Объявляем переменную общей суммы
+                    decimal total = 0m;
+
+                    //Инициализируем лист OrderDetailsDTO
+                    List<OrderDetailsDTO> orderDetailsList = db.OrderDetails.Where(x => x.OrderId == order.OrderId).ToList();
+
+                    //Получаем имя пользователя
+                    UserDTO user = db.Users.FirstOrDefault(x => x.Id == order.UserId);
+                    string userName = user.Username;
+
+                    //Перебираем список товаров из OrderDetailsDTO
+                    foreach (var orderDetails in orderDetailsList)
+                    {
+                        //Получаем товар
+                        ProductDTO product = db.Products.FirstOrDefault(x => x.Id == orderDetails.ProductId);
+
+                        //Получаем цену товара
+                        decimal price = product.Price;
+
+                        //Получаем название товара
+                        string productName = product.Name;
+
+                        //Добавляем товар в словарь
+                        productAndQuantity.Add(productName, orderDetails.Quantity);
+
+                        //Получаем полную стоимость всех товаров пользователя
+                        total += orderDetails.Quantity * price;
+                    }
+                    ordersForAdmin.Add(new OrdersForAdminVM()
+                    {
+                        OrderNumber = order.OrderId,
+                        UserName = userName,
+                        Total = total,
+                        ProductsAndQuantity = productAndQuantity,
+                        CreatedAt = order.CreatedAt
+                    });
+                    //Добавляем данные в модель OrdersForAdminVM
+
+                }
+            }
+            //Возвращаем представление вместе с моделью OrdersForAdminVM
+            return View(ordersForAdmin);
         }
     }
 }
