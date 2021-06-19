@@ -1,4 +1,5 @@
-﻿using Shop.Models.Data;
+﻿using PagedList;
+using Shop.Models.Data;
 using Shop.Models.ViewModels.Shop;
 using System;
 using System.Collections.Generic;
@@ -36,6 +37,8 @@ namespace Shop.Controllers
         {
             //Объявляем список типа List
             List<ProductVM> productVMList;
+
+            //Устанавливаем номер страницы
             using (Db db = new Db())
             {
                 //Получаем id категории
